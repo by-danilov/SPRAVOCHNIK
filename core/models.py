@@ -1,0 +1,76 @@
+from django.db import models
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+
+phone_validator = RegexValidator(
+    regex=r'^[0-9+\(\)\-\s]+$',
+    message="Номер телефона может содержать только цифры и символы: +, (, ), -, пробел."
+)
+
+
+class Employee(models.Model):
+    last_name = models.CharField(max_length=100, verbose_name="Фамилия")
+    first_name = models.CharField(max_length=100, verbose_name="Имя")
+    middle_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Отчество")
+    branch = models.CharField(max_length=200, verbose_name="Филиал")
+    city = models.CharField(max_length=100, verbose_name="Город")
+    email = models.EmailField(unique=True, verbose_name="Почта (рабочая)")
+    personal_phone = models.CharField(
+        max_length=20, blank=True, null=True,
+        validators=[phone_validator], verbose_name="Номер телефона (личный)"
+    )
+    work_phone = models.CharField(
+        max_length=20, blank=True, null=True,
+        validators=[phone_validator], verbose_name="Номер телефона (рабочий)"
+    )
+
+    class Meta:
+        verbose_name = "Сотрудник"
+        verbose_name_plural = "Сотрудники"
+        ordering = ['last_name']
+
+    def __str__(self):
+        return f"{self.last_name} {self.first_name}"
+
+    def clean(self):
+        super().clean()
+        if not self.personal_phone and not self.work_phone:
+            raise ValidationError("Заполните хотя бы один номер телефона.")
+
+
+class CorrectionProposal(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'На рассмотрении'),
+        ('approved', 'Принято'),
+        ('rejected', 'Отклонено'),
+    ]
+
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, verbose_name="Сотрудник")
+    # Здесь хранится техническое имя поля (например, 'city')
+    field_name = models.CharField(max_length=100, verbose_name="Имя поля")
+    new_value = models.TextField(verbose_name="Новое значение")
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Статус")
+
+    def save(self, *args, **kwargs):
+        # Проверяем изменение статуса на "Принято"
+        if self.pk:
+            old_status = CorrectionProposal.objects.get(pk=self.pk).status
+            if old_status != 'approved' and self.status == 'approved':
+                # Чистим имя поля от лишних пробелов и приводим к нижнему регистру
+                attr_name = self.field_name.strip().lower()
+
+                if hasattr(self.employee, attr_name):
+                    setattr(self.employee, attr_name, self.new_value)
+                    # Валидация обновленного сотрудника
+                    self.employee.full_clean()
+                    self.employee.save()
+                else:
+                    # Если поле не найдено, это логгируется для отладки
+                    print(f"DEBUG: Поле {attr_name} не найдено у модели Employee")
+
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Предложение"
+        verbose_name_plural = "Предложения"

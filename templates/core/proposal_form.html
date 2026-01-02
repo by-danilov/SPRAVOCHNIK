@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Предложить исправление</h4>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Вы предлагаете изменения для: <strong>{{ view.kwargs.employee_id }}</strong></p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.field_name.label }}</label>
+                        {{ form.field_name }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.new_value.label }}</label>
+                        {{ form.new_value }}
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success">Отправить предложение</button>
+                        <a href="{% url 'employee_list' %}" class="btn btn-link">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<script>
+// Простая валидация Bootstrap
+(function () {
+  'use strict'
+  var forms = document.querySelectorAll('form')
+  Array.prototype.slice.call(forms).forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (!form.checkValidity()) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+      form.classList.add('was-validated')
+    }, false)
+  })
+})()
+</script>
