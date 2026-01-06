@@ -14,13 +14,13 @@ def send_employee_backup():
     ws.title = "Employees Backup"
 
     # Заголовки
-    headers = ['ID', 'Фамилия', 'Имя', 'Отчество', 'Филиал', 'Город', 'Email', 'Личный тел.', 'Раб. тел.']
+    headers = ['ID', 'Фамилия', 'Имя', 'Отчество', 'Должность', 'Филиал', 'Город', 'Email', 'Личный тел.', 'Раб. тел.']
     ws.append(headers)
 
     # Данные
     for emp in Employee.objects.all():
         ws.append([
-            emp.id, emp.last_name, emp.first_name, emp.middle_name,
+            emp.id, emp.last_name, emp.first_name, emp.middle_name, emp.position,
             emp.branch, emp.city, emp.email, emp.personal_phone, emp.work_phone
         ])
 

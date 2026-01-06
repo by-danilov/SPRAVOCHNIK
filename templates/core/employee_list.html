@@ -13,6 +13,7 @@
     <thead class="table-dark">
         <tr>
             <th>Сотрудник</th>
+            <th>Должность</th>
             <th>ЦФО</th>
             <th>Город</th>
             <th>Контакты</th>
@@ -23,6 +24,7 @@
         {% for emp in employees %}
         <tr>
             <td>{{ emp.last_name }} {{ emp.first_name }} {{ emp.middle_name }}</td>
+            <td>{{ emp.position }}</td>
             <td>{{ emp.branch }}</td>
             <td>{{ emp.city }}</td>
             <td>📬 {{ emp.email }}<br>📱 {{ emp.personal_phone|default:"" }} (сот)<br>☎️ {{ emp.work_phone|default:"" }} (раб)</td>
