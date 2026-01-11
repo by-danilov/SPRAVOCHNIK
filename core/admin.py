@@ -8,51 +8,62 @@ from .models import Employee, CorrectionProposal
 class EmployeeResource(resources.ModelResource):
     class Meta:
         model = Employee
+        fields = ('id', 'last_name', 'first_name', 'position', 'branch', 'city', 'email', 'personal_phone',
+                  'work_phone')
         import_id_fields = ['id']  # Позволяет обновлять существующих по ID
 
 
 @admin.register(Employee)
 class EmployeeAdmin(ImportExportModelAdmin):
     resource_class = EmployeeResource
-    list_display = ('last_name', 'first_name', 'branch', 'city', 'email', 'work_phone')
-    search_fields = ('last_name', 'city', 'branch', 'email')
-    list_filter = ('branch', 'city')
+    list_display = ('last_name', 'first_name', 'position', 'branch', 'city', 'email', 'work_phone')
+    search_fields = ('last_name', 'city', 'position', 'branch', 'email')
+    list_filter = ('branch', 'city', 'position')
 
 
 @admin.register(CorrectionProposal)
 class CorrectionProposalAdmin(admin.ModelAdmin):
-    # Добавляем колонку "Было", чтобы админ видел разницу сразу
+    # list_display[2] теперь точно указывает на существующий метод get_current_val
     list_display = ('employee', 'field_name', 'get_current_val', 'new_value', 'status', 'created_at')
     list_filter = ('status', 'field_name')
-    # Добавляем наши действия
     actions = ['approve_selected_proposals', 'reject_selected_proposals']
 
+    # Метод для отображения текущего значения (информативно для админа)
     def get_current_val(self, obj):
-        """Отображает текущее значение поля в базе данных"""
         try:
             return getattr(obj.employee, obj.field_name)
-        except:
-            return "Ошибка поля"
+        except Exception:
+            return "—"
 
     get_current_val.short_description = "Текущее значение"
 
-    def approve_selected_proposals(self, request, queryset):
-        """Действие для массового одобрения"""
-        count = 0
-        for proposal in queryset:
-            if proposal.status != 'approved':
-                proposal.status = 'approved'
-                # ВАЖНО: вызываем сохранение каждого объекта вручную,
-                # чтобы сработал метод save() из models.py
-                proposal.save()
-                count += 1
-        self.message_user(request, f"Успешно одобрено и применено {count} предложений.")
+    # Блокировка полей, если заявка уже закрыта (approved/rejected)
+    def get_readonly_fields(self, request, obj=None):
+        if obj and obj.status in ['approved', 'rejected']:
+            # Все поля становятся только для чтения
+            return [f.name for f in self.model._meta.fields]
+        return ['created_at']
 
-    approve_selected_proposals.short_description = "✅ Принять выбранные обновления"
+    def approve_selected_proposals(self, request, queryset):
+        success_count = 0
+        skipped_count = 0
+        for proposal in queryset:
+            if proposal.status == 'pending':
+                proposal.status = 'approved'
+                proposal.save()  # Сработает логика в модели
+                success_count += 1
+            else:
+                skipped_count += 1
+
+        if success_count:
+            self.message_user(request, f"Успешно применено {success_count} предложений.")
+        if skipped_count:
+            self.message_user(request, f"{skipped_count} заявок пропущено (уже обработаны).", level='warning')
+
+    approve_selected_proposals.short_description = "✅ Принять выбранные"
 
     def reject_selected_proposals(self, request, queryset):
-        """Действие для массового отклонения"""
-        updated = queryset.update(status='rejected')
-        self.message_user(request, f"{updated} предложений были отклонены.")
+        count = queryset.filter(status='pending').update(status='rejected')
+        self.message_user(request, f"Отклонено {count} заявок.")
 
-    reject_selected_proposals.short_description = "❌ Отклонить выбранные обновления"
+    reject_selected_proposals.short_description = "❌ Отклонить выбранные"

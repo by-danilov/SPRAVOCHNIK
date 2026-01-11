@@ -7,6 +7,7 @@ class CorrectionProposalForm(forms.ModelForm):
         ('last_name', 'Фамилия'),
         ('first_name', 'Имя'),
         ('middle_name', 'Отчество'),
+        ('position', 'Должность'),
         ('branch', 'Филиал'),
         ('city', 'Город'),
         ('email', 'Email'),

@@ -12,6 +12,7 @@ class Employee(models.Model):
     last_name = models.CharField(max_length=100, verbose_name="Фамилия")
     first_name = models.CharField(max_length=100, verbose_name="Имя")
     middle_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="Отчество")
+    position = models.CharField(max_length=150, verbose_name="Должность", default="Сотрудник")
     branch = models.CharField(max_length=200, verbose_name="Филиал")
     city = models.CharField(max_length=100, verbose_name="Город")
     email = models.EmailField(unique=True, verbose_name="Почта (рабочая)")
@@ -53,21 +54,23 @@ class CorrectionProposal(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Статус")
 
     def save(self, *args, **kwargs):
-        # Проверяем изменение статуса на "Принято"
         if self.pk:
-            old_status = CorrectionProposal.objects.get(pk=self.pk).status
-            if old_status != 'approved' and self.status == 'approved':
-                # Чистим имя поля от лишних пробелов и приводим к нижнему регистру
-                attr_name = self.field_name.strip().lower()
+            # Получаем текущее состояние заявки из базы данных
+            old_instance = CorrectionProposal.objects.get(pk=self.pk)
 
+            # ЗАПРЕТ: Если статус уже был "Принято" или "Отклонено", выдаем ошибку
+            if old_instance.status in ['approved', 'rejected']:
+                raise ValidationError(
+                    f"Нельзя изменить заявку со статусом '{old_instance.get_status_display()}'"
+                )
+
+            # Логика применения изменений (выполняется только если статус меняется на approved)
+            if old_instance.status == 'pending' and self.status == 'approved':
+                attr_name = self.field_name.strip().lower()
                 if hasattr(self.employee, attr_name):
                     setattr(self.employee, attr_name, self.new_value)
-                    # Валидация обновленного сотрудника
                     self.employee.full_clean()
                     self.employee.save()
-                else:
-                    # Если поле не найдено, это логгируется для отладки
-                    print(f"DEBUG: Поле {attr_name} не найдено у модели Employee")
 
         super().save(*args, **kwargs)
 

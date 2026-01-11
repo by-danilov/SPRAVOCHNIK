@@ -17,8 +17,12 @@ class EmployeeListView(ListView):
         object_list = Employee.objects.all()
         if q:
             object_list = object_list.filter(
-                Q(last_name__icontains=q) | Q(first_name__icontains=q) |
-                Q(branch__icontains=q) | Q(city__icontains=q) | Q(email__icontains=q)
+                Q(last_name__icontains=q) |
+                Q(first_name__icontains=q) |
+                Q(position__icontains=q) |
+                Q(branch__icontains=q) |
+                Q(city__icontains=q) |
+                Q(email__icontains=q)
             )
         return object_list
 
