@@ -47,17 +47,23 @@ class CorrectionProposalAdmin(admin.ModelAdmin):
     def approve_selected_proposals(self, request, queryset):
         success_count = 0
         skipped_count = 0
-        for proposal in queryset:
-            if proposal.status == 'pending':
-                proposal.status = 'approved'
-                proposal.save()  # Сработает логика в модели
-                success_count += 1
-            else:
-                skipped_count += 1
+
+        # Добавляем сортировку .order_by('created_at'),
+        # чтобы изменения шли по порядку
+        proposals_to_approve = queryset.filter(status='pending').order_by('created_at')
+
+        for proposal in proposals_to_approve:
+            proposal.status = 'approved'
+            # Вызов save() запустит логику с refresh_from_db() из модели
+            proposal.save()
+            success_count += 1
+
+        # Вычисляем пропущенные (те, что не были в pending)
+        skipped_count = queryset.count() - success_count
 
         if success_count:
             self.message_user(request, f"Успешно применено {success_count} предложений.")
-        if skipped_count:
+        if skipped_count > 0:
             self.message_user(request, f"{skipped_count} заявок пропущено (уже обработаны).", level='warning')
 
     approve_selected_proposals.short_description = "✅ Принять выбранные"
