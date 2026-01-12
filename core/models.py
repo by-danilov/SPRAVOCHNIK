@@ -55,17 +55,17 @@ class CorrectionProposal(models.Model):
 
     def save(self, *args, **kwargs):
         if self.pk:
-            # Получаем текущее состояние заявки из базы данных
             old_instance = CorrectionProposal.objects.get(pk=self.pk)
 
-            # ЗАПРЕТ: Если статус уже был "Принято" или "Отклонено", выдаем ошибку
             if old_instance.status in ['approved', 'rejected']:
                 raise ValidationError(
                     f"Нельзя изменить заявку со статусом '{old_instance.get_status_display()}'"
                 )
 
-            # Логика применения изменений (выполняется только если статус меняется на approved)
             if old_instance.status == 'pending' and self.status == 'approved':
+                # ПЕРЕД обновлением подтягиваем актуальные данные из БД
+                self.employee.refresh_from_db()
+
                 attr_name = self.field_name.strip().lower()
                 if hasattr(self.employee, attr_name):
                     setattr(self.employee, attr_name, self.new_value)
