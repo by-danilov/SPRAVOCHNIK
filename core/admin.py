@@ -8,7 +8,7 @@ from .models import Employee, CorrectionProposal
 class EmployeeResource(resources.ModelResource):
     class Meta:
         model = Employee
-        fields = ('id', 'last_name', 'first_name', 'position', 'branch', 'city', 'email', 'personal_phone',
+        fields = ('id', 'last_name', 'first_name', 'middle_name', 'position', 'branch', 'city', 'email', 'personal_phone',
                   'work_phone')
         import_id_fields = ['id']  # Позволяет обновлять существующих по ID
 
@@ -16,7 +16,7 @@ class EmployeeResource(resources.ModelResource):
 @admin.register(Employee)
 class EmployeeAdmin(ImportExportModelAdmin):
     resource_class = EmployeeResource
-    list_display = ('last_name', 'first_name', 'position', 'branch', 'city', 'email', 'work_phone')
+    list_display = ('last_name', 'first_name', 'middle_name', 'position', 'branch', 'city', 'email', 'work_phone')
     search_fields = ('last_name', 'city', 'position', 'branch', 'email')
     list_filter = ('branch', 'city', 'position')
 
